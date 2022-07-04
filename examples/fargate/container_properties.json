@@ -14,7 +14,7 @@
     },
     {
       "type": "MEMORY",
-      "value": "1024"
+      "value": "2048"
     }
   ],
   "executionRoleArn": "${aws_iam_role.ecs_task_execution_role.arn}",
