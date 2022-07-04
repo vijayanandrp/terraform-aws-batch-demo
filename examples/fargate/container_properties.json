@@ -17,13 +17,5 @@
       "value": "2048"
     }
   ],
-  "executionRoleArn": "${aws_iam_role.ecs_task_execution_role.arn}",
-  "logConfiguration": {
-    "logDriver": "awslogs",
-    "options": {
-      "awslogs-group": "${aws_cloudwatch_log_group.this.id}",
-      "awslogs-region": "${local.region}",
-      "awslogs-stream-prefix": "${local.name}"
-    }
-  }
+  "executionRoleArn": "${aws_iam_role.ecs_task_execution_role.arn}"
 }
