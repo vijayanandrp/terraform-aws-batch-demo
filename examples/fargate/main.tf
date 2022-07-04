@@ -4,7 +4,7 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "batch-ex-${replace(basename(path.cwd), "_", "-")}"
+  name   = "demo-batch-ecs"
 
   tags = {
     Name       = local.name
