@@ -4,7 +4,7 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "demo-batch-ecs"
+  name   = "demobatchecs"
 
   tags = {
     Name       = local.name
