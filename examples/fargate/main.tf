@@ -122,26 +122,7 @@ module "batch" {
       propagate_tags        = true
       platform_capabilities = ["FARGATE"]
 
-      container_properties = jsonencode({
-        command = ["ls", "-la"]
-        image   = "public.ecr.aws/runecast/busybox:1.33.1"
-        fargatePlatformConfiguration = {
-          platformVersion = "LATEST"
-        },
-        resourceRequirements = [
-          { type = "VCPU", value = 1 },
-          { type = "MEMORY", value = 1024 }
-        ],
-        executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
-        logConfiguration = {
-          logDriver = "awslogs"
-          options = {
-            awslogs-group         = aws_cloudwatch_log_group.this.id
-            awslogs-region        = local.region
-            awslogs-stream-prefix = local.name
-          }
-        }
-      })
+      container_properties = file("./container_properties.json")
 
       attempt_duration_seconds = 60
       retry_strategy = {
