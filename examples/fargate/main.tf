@@ -124,7 +124,8 @@ module "batch" {
 
       container_properties = jsonencode({
         command = ["ls", "-la"]
-        image   = "public.ecr.aws/runecast/busybox:1.33.1"
+        #image   = "public.ecr.aws/runecast/busybox:1.33.1"
+        image    = "921565885029.dkr.ecr.us-east-1.amazonaws.com/batch-s3-docker:latest"
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
@@ -203,33 +204,6 @@ module "vpc" {
   tags = local.tags
 }
 
-module "vpc_endpoints" {
-  source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 3.0"
-
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
-
-  endpoints = {
-    ecr_api = {
-      service             = "ecr.api"
-      private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
-    }
-    ecr_dkr = {
-      service             = "ecr.dkr"
-      private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
-    }
-    s3 = {
-      service         = "s3"
-      service_type    = "Gateway"
-      route_table_ids = module.vpc.private_route_table_ids
-    }
-  }
-
-  tags = local.tags
-}
 
 module "vpc_endpoint_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
@@ -255,6 +229,7 @@ module "vpc_endpoint_security_group" {
   tags = local.tags
 }
 
+
 resource "aws_iam_role" "ecs_task_execution_role" {
   name               = "${local.name}-ecs-task-exec"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_execution_role.json
@@ -276,10 +251,14 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "ecs_task_s3full_access" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/aws/batch/${local.name}"
-  retention_in_days = 1
+  retention_in_days = 30
 
   tags = local.tags
 }
-
