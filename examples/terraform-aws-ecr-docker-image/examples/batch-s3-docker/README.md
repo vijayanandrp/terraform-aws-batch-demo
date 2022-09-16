@@ -24,3 +24,7 @@ terraform apply --auto-approve
 
 To destroy the stack,
 terraform destroy --auto-approve
+
+
+Reference:  https://aws.amazon.com/blogs/compute/creating-a-simple-fetch-and-run-aws-batch-job/
+
