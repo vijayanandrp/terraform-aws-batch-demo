@@ -125,6 +125,7 @@ module "batch" {
       container_properties = jsonencode({
         command = ["ls", "-la"]
         #image   = "public.ecr.aws/runecast/busybox:1.33.1"
+	## Below ECR Image URL should be updated.
         image    = "921565885029.dkr.ecr.us-east-1.amazonaws.com/batch-s3-docker:latest"
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
@@ -134,6 +135,7 @@ module "batch" {
           { type = "MEMORY", value = "2048" }
         ],
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
+        jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
         logConfiguration = {
           logDriver = "awslogs"
           options = {
