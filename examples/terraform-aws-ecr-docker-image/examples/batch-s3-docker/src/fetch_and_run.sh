@@ -61,14 +61,9 @@ if [ "${scheme}" != "s3" ]; then
 fi
 
 # Check that necessary programs are available
-which aws >/dev/null 2>&1 || error_exit "Unable to find AWS CLI executable."
-which unzip >/dev/null 2>&1 || error_exit "Unable to find unzip executable."
+#which aws >/dev/null 2>&1 || error_exit "Unable to find AWS CLI executable."
+#which unzip >/dev/null 2>&1 || error_exit "Unable to find unzip executable."
 
-response=$(wget -O - 169.254.170.2$AWS_CONTAINER_CREDENTIALS_RELATIVE_URI)
-
-export AWS_ACCESS_KEY_ID=$(echo "$response" | jq -r '.AccessKeyId')
-export AWS_SECRET_ACCESS_KEY=$(echo "$response" | jq -r '.SecretAccessKey')
-export AWS_SESSION_TOKEN=$(echo "$response" | jq -r '.Token')
 
 
 # Create a temporary directory to hold the downloaded contents, and make sure

@@ -16,8 +16,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
-module "python-hello-world" {
+module "demo-batch" {
   source      = "../../"
-  image_name  = "batch-s3-docker"
+  image_name  = "demo-batch-s3-docker"
   source_path = "${path.module}/src"
 }
