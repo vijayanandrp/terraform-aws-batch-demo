@@ -1,3 +1,5 @@
+
+
 ## Additional Steps:
 
 * We cannot use cloudshell to run this terraform script. We can run it either locally or launch an ec2 instance to run this.
@@ -14,7 +16,7 @@ service docker start
 
 yum install git
 
-
+## Teraform Steps
 terraform init
 
 terraform plan
