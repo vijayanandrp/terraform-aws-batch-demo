@@ -1,7 +1,20 @@
 # AWS Batch Terraform module
 
 Terraform module which creates AWS Batch resources.
+readme
 
+
+User - Roles permission
+S3 bucket
+files push
+
+00_ecr - https://github.com/vijayanandrp/terraform-aws-batch-demo/tree/master/examples/terraform-aws-ecr-docker-image/examples/batch-s3-docker
+
+01_fargate
+
+02_python
+
+https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/batch.html#Batch.Client.submit_job
 ## Usage
 
 See [`examples`](https://github.com/terraform-aws-modules/terraform-aws-batch/tree/master/examples) directory for working examples to reference:
