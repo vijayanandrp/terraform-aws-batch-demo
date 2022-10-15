@@ -4,11 +4,12 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "batch-ex-${replace(basename(path.cwd), "_", "-")}"
+  name   = "enc-dec-${replace(basename(path.cwd), "_", "-")}"
 
   tags = {
     Name       = local.name
     Example    = local.name
+	created-by = "terraform"
     Repository = "https://github.com/terraform-aws-modules/terraform-aws-batch"
   }
 }
@@ -20,22 +21,22 @@ data "aws_region" "current" {}
 ################################################################################
 
 module "batch_disabled" {
-  source = "../.."
+  source = "../../terraform/modules/terraform-aws-batch"
 
   create = false
 }
 
 module "batch" {
-  source = "../.."
+  source = "../../terraform/modules/terraform-aws-batch"
 
-  instance_iam_role_name        = "${local.name}-ecs-instance"
+  instance_iam_role_name        = "${local.name}-ecs-instance-new"
   instance_iam_role_path        = "/batch/"
   instance_iam_role_description = "IAM instance role/profile for AWS Batch ECS instance(s)"
   instance_iam_role_tags = {
     ModuleCreatedRole = "Yes"
   }
 
-  service_iam_role_name        = "${local.name}-batch"
+  service_iam_role_name        = "${local.name}-batch-new"
   service_iam_role_path        = "/batch/"
   service_iam_role_description = "IAM service role for AWS Batch"
   service_iam_role_tags = {
@@ -43,7 +44,7 @@ module "batch" {
   }
 
   create_spot_fleet_iam_role      = true
-  spot_fleet_iam_role_name        = "${local.name}-spot"
+  spot_fleet_iam_role_name        = "${local.name}-spot-new"
   spot_fleet_iam_role_path        = "/batch/"
   spot_fleet_iam_role_description = "IAM spot fleet role for AWS Batch"
   spot_fleet_iam_role_tags = {
@@ -56,7 +57,7 @@ module "batch" {
 
       compute_resources = {
         type      = "FARGATE"
-        max_vcpus = 4
+        max_vcpus = 8
 
         security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
         subnets            = module.vpc.private_subnets
@@ -70,7 +71,7 @@ module "batch" {
 
       compute_resources = {
         type      = "FARGATE_SPOT"
-        max_vcpus = 4
+        max_vcpus = 8
 
         security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
         subnets            = module.vpc.private_subnets
@@ -83,7 +84,7 @@ module "batch" {
   # Job queus and scheduling policies
   job_queues = {
     low_priority = {
-      name     = "LowPriorityFargate"
+      name     = "LowPriorityFargate_1"
       state    = "ENABLED"
       priority = 1
 
@@ -93,7 +94,7 @@ module "batch" {
     }
 
     high_priority = {
-      name     = "HighPriorityFargate"
+      name     = "HighPriorityFargate_1"
       state    = "ENABLED"
       priority = 99
 
@@ -124,15 +125,24 @@ module "batch" {
 
       container_properties = jsonencode({
         command = ["ls", "-la"]
-        image   = "public.ecr.aws/runecast/busybox:1.33.1"
+		
+        #image   = "public.ecr.aws/runecast/busybox:1.33.1"
+		## Below ECR Image URL should be updated.
+        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
+		
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
+		
+		# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
-          { type = "VCPU", value = "1" },
-          { type = "MEMORY", value = "2048" }
+          { type = "VCPU", value = "4" },
+          { type = "MEMORY", value = "30720" }
         ],
+		
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
+        jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
+		
         logConfiguration = {
           logDriver = "awslogs"
           options = {
@@ -141,6 +151,7 @@ module "batch" {
             awslogs-stream-prefix = local.name
           }
         }
+		
       })
 
       attempt_duration_seconds = 60
@@ -159,7 +170,7 @@ module "batch" {
       }
 
       tags = {
-        JobDefinition = "Example"
+        JobDefinition = "S3 files encrypt decrypt compress crypto services"
       }
     }
   }
@@ -170,6 +181,7 @@ module "batch" {
 ################################################################################
 # Supporting Resources
 ################################################################################
+
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -203,33 +215,6 @@ module "vpc" {
   tags = local.tags
 }
 
-module "vpc_endpoints" {
-  source  = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-  version = "~> 3.0"
-
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
-
-  endpoints = {
-    ecr_api = {
-      service             = "ecr.api"
-      private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
-    }
-    ecr_dkr = {
-      service             = "ecr.dkr"
-      private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
-    }
-    s3 = {
-      service         = "s3"
-      service_type    = "Gateway"
-      route_table_ids = module.vpc.private_route_table_ids
-    }
-  }
-
-  tags = local.tags
-}
 
 module "vpc_endpoint_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
@@ -255,6 +240,7 @@ module "vpc_endpoint_security_group" {
   tags = local.tags
 }
 
+
 resource "aws_iam_role" "ecs_task_execution_role" {
   name               = "${local.name}-ecs-task-exec"
   assume_role_policy = data.aws_iam_policy_document.ecs_task_execution_role.json
@@ -276,9 +262,83 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "ecs_task_s3full_access" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/aws/batch/${local.name}"
-  retention_in_days = 1
+  retention_in_days = 30
 
   tags = local.tags
+}
+
+# Creating Amazon EFS File system
+resource "aws_efs_file_system" "efs" {
+	
+	creation_token = "enc-dec-efs-fs"
+	
+	# Creating the AWS EFS lifecycle policy
+	# Amazon EFS supports two lifecycle policies. Transition into IA and Transition out of IA
+	# Transition into IA transition files into the file systems's Infrequent Access storage class
+	# Transition files out of IA storage
+	lifecycle_policy {
+		transition_to_ia = "AFTER_30_DAYS"
+	}
+	
+	# Tagging the EFS File system with its value as efs
+	tags = {
+		Name = "enc-dec-efs-fs"
+	}
+}
+
+# Creating the EFS access point for AWS EFS File system
+resource "aws_efs_access_point" "test" {
+	file_system_id = aws_efs_file_system.efs.id
+}
+
+# Creating the AWS EFS System policy to transition files into and out of the file system.
+resource "aws_efs_file_system_policy" "policy" {
+
+	file_system_id = aws_efs_file_system.efs.id
+  
+	# The EFS System Policy allows clients to mount, read and perform 
+	# write operations on File system 
+	# The communication of client and EFS is set using aws:secureTransport Option
+	  policy = <<POLICY
+	{
+		"Version": "2012-10-17",
+		"Id": "Policy01",
+		"Statement": [
+			{
+				"Sid": "Statement",
+				"Effect": "Allow",
+				"Principal": {
+					"AWS": "*"
+				},
+				"Resource": "${aws_efs_file_system.efs.arn}",
+				"Action": [
+					"elasticfilesystem:ClientMount",
+					"elasticfilesystem:ClientRootAccess",
+					"elasticfilesystem:ClientWrite"
+				],
+				"Condition": {
+					"Bool": {
+						"aws:SecureTransport": "false"
+					}
+				}
+			}
+		]
+	}
+	POLICY
+}
+
+# Creating the AWS EFS Mount point in a specified Subnet 
+# AWS EFS Mount point uses File system ID to launch.
+resource "aws_efs_mount_target" "mount" {
+	file_system_id  = aws_efs_file_system.efs.id
+	count           = length(module.vpc.private_subnets)
+	subnet_id       = tolist(module.vpc.private_subnets)[count.index]
+	security_groups = [module.vpc_endpoint_security_group.security_group_id]
 }
